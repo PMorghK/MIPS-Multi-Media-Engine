@@ -1,0 +1,118 @@
+\documentclass{article}
+
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
+\usepackage[english]{babel}
+
+% Set page size and margins
+% Replace `letterpaper' with `a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{commath}
+\usepackage{amssymb}
+\usepackage{xparse}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\NewDocumentCommand{\codeword}{v}{%
+\texttt{\textcolor{blue}{#1}}%
+}
+
+
+\title{Project 2: MIPS MPU}
+\author{Pedram Kayedpour}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+The goal of part two of the project was to complete the mips based Multimedia Processing Unit (MPU). The MPU design we are going for is a 4 stage piplined processor consisting of stages: Instruction Fetch, Instruction Decode, Execution, and Write Back.
+
+\begin{figure}
+	\centering
+	\includegraphics[width=1\linewidth]{diagram.png}
+	\caption{Diagram of MPU}
+	\label{fig:diagram}
+\end{figure}
+
+\section{Design}
+
+The design of the four stage MPU was not much different from what we learned in class. Except there is a main component missing and that is main memory. One more important thing to note when dealing with piplining is that there are hazards that will occur. These hazards in our case our just simply using the same register twice back to back. The solution to this without slowing down is to forward the newest value from the WB stage back to EX stage into the ALU instead of reading from the ID/EX register. Or in other words, Forwarding.
+
+We will be using the ALU that we created in PART 1 of this Project.
+
+The 0 register is always set to zero as it is with mips architecture.
+
+\subsection{Assembler}
+
+One Important section of part 2 was that we needed to make our own Assembler for our mips MPU. The way I decided to approach this was to write an assembler in C. The assembler is pretty good and it is able to handle a pretty soft-typed format. One quirk that it does have, is that BCW needs to have a dummy register filled in or else it wont be able to assemble the mips instruction.
+
+The complier should be able to handle all instruction. This means that this MPU could be tested with as many instructions and combination of instructions as we would like. all that matters is for someone to write the mips instructions and assemble it using the compiler.c file provided with this report.
+
+\section{Testing}
+
+The main method I decided to test the MPU was to feed it a normal and small set of instructions on only the first 2 registers in the register file. My reasoning was that since all registers are the same I would not need to test functionallity of all registers. All I needed to check was wether or not the pipelining was able to handle back to back instructions without having trouble dealing with forwarding or write bypass.
+
+This leaves us with a very simple mips program that I have attached to this report as example.txt. You can check the content of this File to see what instructions the CPU will be running. 
+
+I also created a testbench that outputs its content into a file called output.txt. this file will give the opcode at each pipeline stage and also the contents of registers at each stage. granted it must be modified to be able to output registers other than 0, 1, and 2. This will help confirm wether or not the MPU's final state is correct or not.
+
+\section{Results}
+
+\begin{figure}
+	\centering
+	\includegraphics[width=1\linewidth]{imageOP.png}
+	\caption{waveform of MPU executing until all OPcodes reach NOP,}
+	\label{fig:waveform}
+\end{figure}
+
+The main result is in the output.txt file that will be generated when a simulation is ran. I also attached the copy of the output.txt file with this report,as well as the input instructions and also the not assembled mips code. You could also write your own mips code for the simulation.
+
+\begin{center}
+	\begin{tabular} {|c||c|c|c|c|}
+		\hline
+		Cycle & IF & ID & EX & WB \\
+		\hline
+		\hline
+		1 & LI & NOP & NOP & NOP \\
+		\hline
+		2 & AU & LI & NOP & NOP \\
+		\hline
+		3 & AU & AU & LI & NOP \\
+		\hline
+		4 & LI & AU & AU & LI \\
+		\hline
+		5 & SLHI & LI & AU & AU \\
+		\hline
+		6 & BCW & SLHI & LI & AU \\
+		\hline
+		7 & IMAL & BCW & SLHI & LI \\
+		\hline
+		8 & IMAH & IMAL & BCW & SLHI \\
+		\hline
+		9 & LMAL & IMAH & IMAL & BCW \\
+		\hline
+		10 & SFWU & LMAL & IMAH & IMAL \\
+		\hline
+		11 & NOP & SFWU & LMAL & IMAH \\
+		\hline
+		12 & NOP & NOP & SFWU & LMAL \\
+		\hline
+		13 & NOP & NOP & NOP & SFWU \\
+		\hline
+		14 & NOP & NOP & NOP & NOP \\
+		\hline
+	\end{tabular}
+\end{center}
+
+The expected results of the simulation is that one register (register one) will contain a value that 16 * 16 + 16 and then that number done the same operation of x * x + x. The result for register 2 is that we have a broadcasted word that is in the first 8 hex values. before that reg 2 was shifted to the left twice so it will be the value 586 * 4. Register zero was written to but it should still stay as zero.
+
+\section{Conclusion}
+
+In the final project of ESE 345 we designed and simulated a 4 stage pipleined mips MPU that is able to do arithmatic on large registers that can contain multiple 16 bit or 32 bit sections.  we were able to show the pipelining stages and the flow of instructions through the pipepline. The output.txt file is able to fully demonstrate what happens at each step and what opcode each stage is seeing that the current cycle.
+
+\end{document}
